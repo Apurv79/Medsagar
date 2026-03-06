@@ -1,7 +1,7 @@
 import express from "express";
 import * as controller from "./admin.controller.js";
 import * as validator from "./admin.validator.js";
-import validatorMiddleware from "../../middlewares/validator.middleware.js";
+import validate from "../../middlewares/validator.middleware.js";
 import authMiddleware from "../../middlewares/auth.middleware.js";
 import roleMiddleware from "../../middlewares/role.middleware.js";
 import rateLimiter from "../../middlewares/rateLimit.middleware.js";
@@ -18,8 +18,7 @@ router.post(
     rateLimiter,
     authMiddleware,
     roleMiddleware("ADMIN", "SUPER_ADMIN"),
-    validator.createUserValidator,
-    validatorMiddleware,
+    validate(validator.createUserSchema),
     controller.createUser
 );
 
@@ -28,8 +27,7 @@ router.patch(
     rateLimiter,
     authMiddleware,
     roleMiddleware("ADMIN", "SUPER_ADMIN"),
-    validator.resetPasswordValidator,
-    validatorMiddleware,
+    validate(validator.adminResetPasswordSchema),
     controller.resetUserPassword
 );
 

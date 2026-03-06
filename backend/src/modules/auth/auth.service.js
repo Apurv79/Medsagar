@@ -1,20 +1,22 @@
 import crypto from "crypto";
 import User from "../user/user.model.js";
-import { AuthSession, PasswordResetToken } from "./auth.model.js";
+import { AuthSession, PasswordResetToken, EmailVerificationToken } from "./auth.model.js";
 
 import logger from "../../utils/logger.js";
 import { hashPassword, verifyPassword, generateRandomPassword } from "../../utils/password.js";
 import { generateTokenPair, verifyRefreshToken } from "../../utils/jwt.js";
-import { sendCredentialsEmail, sendResetPasswordEmail } from "../../utils/mailer.js";
+import { sendCredentialsEmail, sendResetPasswordEmail, sendMail } from "../../utils/mailer.js";
 import { verifyGoogleToken } from "../../configs/oAuth.config.js";
 import { verifyFirebaseToken } from "../../configs/firebase.config.js";
 
 /* ================= LOGIN EMAIL ================= */
 
-export const loginWithEmail = async ({ email, password, ip, userAgent }) => {
-
-  const user = await User.findOne({ email, isActive: true })
-    .select("+password role name email")
+export const loginWithCredentials = async ({ identifier, password, ip, userAgent }) => {
+  const user = await User.findOne({
+    $or: [{ email: identifier }, { userId: identifier }],
+    isActive: true
+  })
+    .select("+password role name email userId")
     .lean();
 
   if (!user) throw new Error("Invalid credentials");
@@ -22,11 +24,7 @@ export const loginWithEmail = async ({ email, password, ip, userAgent }) => {
   const valid = await verifyPassword(user.password, password);
   if (!valid) throw new Error("Invalid credentials");
 
-  const payload = {
-    userId: user._id,
-    role: user.role
-  };
-
+  const payload = { userId: user._id, role: user.role };
   const tokens = generateTokenPair(payload);
 
   await AuthSession.create({
@@ -38,32 +36,34 @@ export const loginWithEmail = async ({ email, password, ip, userAgent }) => {
   });
 
   logger.info("User logged in:", user.email);
-
   return { user, tokens };
 };
 
 /* ================= GOOGLE LOGIN ================= */
 
 export const loginWithGoogle = async ({ idToken, ip, userAgent }) => {
-
   const googleUser = await verifyGoogleToken(idToken);
 
-  let user = await User.findOne({ email: googleUser.email })
-    .select("_id role email name")
+  let user = await User.findOne({
+    $or: [{ email: googleUser.email }, { googleId: googleUser.googleId }]
+  })
+    .select("_id role email name googleId")
     .lean();
 
   if (!user) {
     user = await User.create({
       email: googleUser.email,
       name: googleUser.name,
+      googleId: googleUser.googleId,
       role: "PATIENT",
       authProvider: "GOOGLE",
       isVerified: true
     });
+  } else if (!user.googleId) {
+    await User.updateOne({ _id: user._id }, { googleId: googleUser.googleId, authProvider: "GOOGLE" });
   }
 
   const payload = { userId: user._id, role: user.role };
-
   const tokens = generateTokenPair(payload);
 
   await AuthSession.create({
@@ -80,9 +80,7 @@ export const loginWithGoogle = async ({ idToken, ip, userAgent }) => {
 /* ================= OTP LOGIN ================= */
 
 export const loginWithOTP = async ({ firebaseToken, ip, userAgent }) => {
-
   const decoded = await verifyFirebaseToken(firebaseToken);
-
   const phone = decoded.phone_number;
 
   let user = await User.findOne({ phone })
@@ -99,7 +97,6 @@ export const loginWithOTP = async ({ firebaseToken, ip, userAgent }) => {
   }
 
   const payload = { userId: user._id, role: user.role };
-
   const tokens = generateTokenPair(payload);
 
   await AuthSession.create({
@@ -116,20 +113,12 @@ export const loginWithOTP = async ({ firebaseToken, ip, userAgent }) => {
 /* ================= REFRESH TOKEN ================= */
 
 export const refreshTokenService = async (refreshToken) => {
-
   const decoded = verifyRefreshToken(refreshToken);
+  const session = await AuthSession.findOne({ refreshToken, isRevoked: false }).lean();
 
-  const session = await AuthSession.findOne({
-    refreshToken,
-    isRevoked: false
-  }).lean();
+  if (!session) throw new Error("Session invalid or revoked");
 
-  if (!session) throw new Error("Session invalid");
-
-  const tokens = generateTokenPair({
-    userId: decoded.userId,
-    role: decoded.role
-  });
+  const tokens = generateTokenPair({ userId: decoded.userId, role: decoded.role });
 
   await AuthSession.updateOne(
     { _id: session._id },
@@ -142,75 +131,95 @@ export const refreshTokenService = async (refreshToken) => {
 /* ================= LOGOUT ================= */
 
 export const logoutService = async (refreshToken) => {
-
-  await AuthSession.updateOne(
-    { refreshToken },
-    { isRevoked: true }
-  );
-
+  await AuthSession.updateOne({ refreshToken }, { isRevoked: true });
   logger.info("Session revoked");
 };
 
-/* ================= FORGOT PASSWORD ================= */
+export const logoutAllSessionsService = async (userId) => {
+  await AuthSession.updateMany({ userId }, { isRevoked: true });
+  logger.info(`All sessions revoked for user: ${userId}`);
+};
+
+/* ================= SESSIONS ================= */
+
+export const getActiveSessionsService = async (userId) => {
+  return AuthSession.find({ userId, isRevoked: false, expiresAt: { $gt: new Date() } })
+    .select("ipAddress userAgent createdAt")
+    .sort({ createdAt: -1 })
+    .lean();
+};
+
+export const revokeSessionService = async (userId, sessionId) => {
+  await AuthSession.updateOne({ _id: sessionId, userId }, { isRevoked: true });
+};
+
+/* ================= PASSWORD MANAGEMENT ================= */
+
+export const changePasswordService = async (userId, { oldPassword, newPassword }) => {
+  const user = await User.findById(userId).select("+password");
+  if (!user || user.authProvider !== "LOCAL") throw new Error("Password change not allowed");
+
+  const valid = await verifyPassword(user.password, oldPassword);
+  if (!valid) throw new Error("Invalid current password");
+
+  user.password = await hashPassword(newPassword);
+  await user.save();
+};
 
 export const forgotPasswordService = async (email) => {
-
-  const user = await User.findOne({ email })
-    .select("_id email name authProvider")
-    .lean();
-
-  if (!user) return;
-
-  if (user.authProvider !== "LOCAL") {
-    throw new Error(`Password reset not allowed for ${user.authProvider} accounts`);
-  }
+  const user = await User.findOne({ email }).select("_id email name authProvider").lean();
+  if (!user || user.authProvider !== "LOCAL") return;
 
   const token = crypto.randomBytes(32).toString("hex");
-
   await PasswordResetToken.create({
     userId: user._id,
     token,
-    expiresAt: new Date(Date.now() + 1000 * 60 * 15)
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000)
   });
 
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
-
-  await sendResetPasswordEmail({
-    email,
-    resetLink
-  });
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+  await sendResetPasswordEmail({ email, resetLink });
 };
-
-/* ================= RESET PASSWORD ================= */
 
 export const resetPasswordService = async ({ token, password }) => {
-
-  const record = await PasswordResetToken.findOne({
-    token,
-    used: false
-  }).lean();
-
-  if (!record) throw new Error("Invalid reset token");
+  const record = await PasswordResetToken.findOne({ token, used: false, expiresAt: { $gt: new Date() } }).lean();
+  if (!record) throw new Error("Invalid or expired reset token");
 
   const hashed = await hashPassword(password);
-
-  await User.updateOne(
-    { _id: record.userId },
-    { password: hashed }
-  );
-
-  await PasswordResetToken.updateOne(
-    { _id: record._id },
-    { used: true }
-  );
+  await User.updateOne({ _id: record.userId }, { password: hashed });
+  await PasswordResetToken.updateOne({ _id: record._id }, { used: true });
 };
 
-/* ================= ADMIN CREATE USER ================= */
+/* ================= EMAIL VERIFICATION ================= */
+
+export const sendVerificationEmailService = async (userId, email) => {
+  const token = crypto.randomBytes(32).toString("hex");
+  await EmailVerificationToken.create({
+    userId,
+    token,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+  });
+
+  const verifyLink = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+  await sendMail({
+    to: email,
+    subject: "Verify Your Medsagar Account",
+    html: `<h2>Email Verification</h2><p>Click below to verify your email:</p><a href="${verifyLink}">Verify Email</a>`
+  });
+};
+
+export const verifyEmailService = async (token) => {
+  const record = await EmailVerificationToken.findOne({ token, used: false, expiresAt: { $gt: new Date() } }).lean();
+  if (!record) throw new Error("Invalid or expired verification token");
+
+  await User.updateOne({ _id: record.userId }, { isVerified: true });
+  await EmailVerificationToken.updateOne({ _id: record._id }, { used: true });
+};
+
+/* ================= ADMIN SERVICES ================= */
 
 export const createUserCredentialsService = async ({ name, email, role }) => {
-
   const password = generateRandomPassword();
-
   const hashed = await hashPassword(password);
 
   const user = await User.create({
@@ -222,44 +231,59 @@ export const createUserCredentialsService = async ({ name, email, role }) => {
     isVerified: true
   });
 
-  await sendCredentialsEmail({
-    email,
-    name,
-    username: email,
-    password,
-    role
-  });
-
-  return user;
+  await sendCredentialsEmail({ email, name, username: email, password, role });
+  return { user, password };
 };
 
-/* ================= ADMIN RESET PASSWORD ================= */
+export const resendCredentialsService = async (email) => {
+  const user = await User.findOne({ email }).select("name role authProvider").lean();
+  if (!user || user.authProvider !== "LOCAL") throw new Error("User not eligible");
+
+  const newPassword = generateRandomPassword();
+  const hashed = await hashPassword(newPassword);
+
+  await User.updateOne({ _id: user._id }, { password: hashed });
+  await sendCredentialsEmail({ email, name: user.name, username: email, password: newPassword, role: user.role });
+
+  return { email, password: newPassword };
+};
 
 export const adminResetPasswordService = async (userId) => {
-  const user = await User.findById(userId).select("email name authProvider role");
-
-  if (!user) throw new Error("User not found");
-
-  if (user.authProvider !== "LOCAL") {
-    throw new Error(`Cannot reset password for ${user.authProvider} accounts`);
-  }
-
-  if (user.role === "SUPER_ADMIN") {
-    throw new Error("Super Admin password cannot be reset via API");
-  }
+  const user = await User.findById(userId).select("email name authProvider role").lean();
+  if (!user || user.authProvider !== "LOCAL") throw new Error("Invalid user");
+  if (user.role === "SUPER_ADMIN") throw new Error("Restricted");
 
   const newPassword = generateRandomPassword();
   const hashed = await hashPassword(newPassword);
 
   await User.updateOne({ _id: userId }, { password: hashed });
+  await sendCredentialsEmail({ email: user.email, name: user.name, username: user.email, password: newPassword, role: user.role });
 
-  await sendCredentialsEmail({
-    email: user.email,
-    name: user.name,
-    username: user.email,
-    password: newPassword,
-    role: "User" // Or generic
-  });
+  return { email: user.email, password: newPassword };
+};
 
-  return true;
+/* ================= UTILS ================= */
+
+export const checkAvailabilityService = async ({ email, phone }) => {
+  const query = {};
+  if (email) query.email = email;
+  if (phone) query.phone = phone;
+
+  const exists = await User.exists(query);
+  return !!exists;
+};
+
+export const linkGoogleService = async (userId, idToken) => {
+  const googleUser = await verifyGoogleToken(idToken);
+  const exists = await User.findOne({ googleId: googleUser.googleId }).lean();
+  if (exists) throw new Error("Google account already linked to another user");
+
+  await User.updateOne({ _id: userId }, { googleId: googleUser.googleId });
+};
+
+export const unlinkGoogleService = async (userId) => {
+  const user = await User.findById(userId).select("authProvider password").lean();
+  if (user.authProvider === "GOOGLE") throw new Error("Cannot unlink primary auth provider");
+
+  await User.updateOne({ _id: userId }, { $unset: { googleId: "" } });
 };

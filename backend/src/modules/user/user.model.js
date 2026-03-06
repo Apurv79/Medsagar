@@ -69,6 +69,13 @@ const userSchema = new mongoose.Schema(
       enum: ["LOCAL", "GOOGLE", "FIREBASE"],
       default: "LOCAL",
       index: true
+    },
+
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true
     }
   },
   {
@@ -82,7 +89,7 @@ userSchema.index({ role: 1, isActive: 1 });
 /**
  * Pre-save hook for sequential ID generation
  */
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   if (!this.userId) {
     let prefix = "USR";
 
@@ -106,7 +113,6 @@ userSchema.pre("save", async function (next) {
 
     this.userId = await generateId(prefix);
   }
-  next();
 });
 
 export default mongoose.model("User", userSchema);

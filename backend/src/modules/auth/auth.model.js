@@ -64,7 +64,6 @@ const authSessionSchema = new mongoose.Schema(
  */
 
 authSessionSchema.index({ userId: 1, isRevoked: 1 });
-authSessionSchema.index({ refreshToken: 1 });
 
 export const AuthSession = mongoose.model(
   "AuthSession",
@@ -107,7 +106,7 @@ const passwordResetSchema = new mongoose.Schema(
   }
 );
 
-passwordResetSchema.index({ token: 1, used: 1 });
+passwordResetSchema.index({ used: 1 });
 
 export const PasswordResetToken = mongoose.model(
   "PasswordResetToken",
@@ -148,7 +147,7 @@ const emailVerificationSchema = new mongoose.Schema(
   }
 );
 
-emailVerificationSchema.index({ token: 1 });
+// EmailVerificationToken token index is already defined in field definition
 
 export const EmailVerificationToken = mongoose.model(
   "EmailVerificationToken",

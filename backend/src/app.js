@@ -31,6 +31,11 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 // Static files
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/public", express.static(path.join(__dirname, "../public")));
+
+// Test Auth Pages (Temporary for testing)
+app.get("/reset-password", (req, res) => res.sendFile(path.join(__dirname, "../public/reset-password.html")));
+app.get("/verify-email", (req, res) => res.sendFile(path.join(__dirname, "../public/verify-email.html")));
 
 // Root route
 app.get("/", (req, res) => {

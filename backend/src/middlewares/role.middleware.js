@@ -2,14 +2,15 @@ const roleMiddleware = (...roles) => {
   return (req, res, next) => {
     const role = req.user?.role;
 
-    if (!roles.includes(role)) {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied"
-      });
+    // SUPER_ADMIN is always allowed
+    if (role === "SUPER_ADMIN" || roles.includes(role)) {
+      return next();
     }
 
-    next();
+    return res.status(403).json({
+      success: false,
+      message: "Access denied"
+    });
   };
 };
 

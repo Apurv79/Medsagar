@@ -1,6 +1,7 @@
-import { body } from "express-validator";
+import Joi from "joi";
 
-export const updateProfileValidator = [
-  body("name").optional().isLength({ min: 2 }),
-  body("phone").optional().isMobilePhone()
-];
+export const updateProfileSchema = Joi.object({
+  name: Joi.string().min(2).optional(),
+  phone: Joi.string().pattern(/^[0-9]{10,15}$/).optional(),
+  avatar: Joi.string().uri().optional()
+});

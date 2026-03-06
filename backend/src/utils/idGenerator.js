@@ -17,7 +17,7 @@ export const generateId = async (prefix) => {
     const counter = await Counter.findOneAndUpdate(
       { key: prefix },
       { $inc: { sequence: 1 } },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     ).lean();
 
     const id = String(counter.sequence).padStart(3, "0");

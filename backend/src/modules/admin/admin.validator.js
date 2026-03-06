@@ -1,11 +1,11 @@
-import { body } from "express-validator";
+import Joi from "joi";
 
-export const createUserValidator = [
-    body("name").notEmpty().withMessage("Name is required"),
-    body("email").isEmail().withMessage("Valid email is required"),
-    body("role").isIn(["DOCTOR", "CLINIC", "ADMIN"]).withMessage("Invalid role")
-];
+export const createUserSchema = Joi.object({
+    name: Joi.string().required(),
+    email: Joi.string().email().required(),
+    role: Joi.string().valid("DOCTOR", "CLINIC", "ADMIN").required()
+});
 
-export const resetPasswordValidator = [
-    body("userId").isMongoId().withMessage("Valid User ID is required")
-];
+export const adminResetPasswordSchema = Joi.object({
+    userId: Joi.string().hex().length(24).required() // Simple MongoID check
+});

@@ -16,9 +16,9 @@ export const createUser = asyncHandler(async (req, res) => {
         });
     }
 
-    const user = await authService.createUserCredentialsService({ name, email, role });
+    const result = await authService.createUserCredentialsService({ name, email, role });
 
-    return ApiResponse.success(res, `${role} created successfully and credentials emailed`, user);
+    return ApiResponse.success(res, `${role} created successfully and credentials emailed`, result);
 });
 
 /**
@@ -27,7 +27,7 @@ export const createUser = asyncHandler(async (req, res) => {
 export const resetUserPassword = asyncHandler(async (req, res) => {
     const { userId } = req.body;
 
-    await authService.adminResetPasswordService(userId);
+    const result = await authService.adminResetPasswordService(userId);
 
-    return ApiResponse.success(res, "Password reset successfully and new credentials emailed");
+    return ApiResponse.success(res, "Password reset successfully and new credentials emailed", result);
 });

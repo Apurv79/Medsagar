@@ -21,6 +21,7 @@ const requiredEnv = [
   "MAIL_USER",
   "MAIL_PASS",
   "REDIS_URL",
+
 ];
 
 requiredEnv.forEach((key) => {
@@ -34,6 +35,7 @@ export default {
   NODE_ENV: ENV,
   PORT: process.env.PORT,
   MONGO_URI: process.env.MONGO_URI,
+  FRONTEND_URL: process.env.FRONTEND_URL,
   JWT: {
     ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
     REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
