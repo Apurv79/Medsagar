@@ -8,6 +8,7 @@ import { generateTokenPair, verifyRefreshToken } from "../../utils/jwt.js";
 import { sendCredentialsEmail, sendResetPasswordEmail, sendMail } from "../../utils/mailer.js";
 import { verifyGoogleToken } from "../../configs/oAuth.config.js";
 import { verifyFirebaseToken } from "../../configs/firebase.config.js";
+import { ApiError } from "../../utils/apiError.js";
 
 /* ================= LOGIN EMAIL ================= */
 
@@ -19,10 +20,10 @@ export const loginWithCredentials = async ({ identifier, password, ip, userAgent
     .select("+password role name email userId")
     .lean();
 
-  if (!user) throw new Error("Invalid credentials");
+  if (!user) throw new ApiError("Invalid credentials", 401);
 
   const valid = await verifyPassword(user.password, password);
-  if (!valid) throw new Error("Invalid credentials");
+  if (!valid) throw new ApiError("Invalid credentials", 401);
 
   const payload = { userId: user._id, role: user.role };
   const tokens = generateTokenPair(payload);

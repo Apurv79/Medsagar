@@ -50,6 +50,8 @@ export default {
     USER: process.env.MAIL_USER,
     PASS: process.env.MAIL_PASS
   },
-  REDIS_URL: process.env.REDIS_URL
+  REDIS_URL: process.env.REDIS_URL,
+  AGORA_APP_ID: process.env.AGORA_APP_ID,
+  AGORA_APP_CERTIFICATE: process.env.AGORA_APP_CERTIFICATE
 
 };

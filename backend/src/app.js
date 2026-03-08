@@ -5,8 +5,20 @@ import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 import env from "./configs/env.config.js";
-import moduleRoutes from "./modules/index.js";
 import errorMiddleware from "./middlewares/error.middleware.js";
+
+// Module Routes Imports
+import authRoutes from "./modules/auth/auth.routes.js";
+import userRoutes from "./modules/user/user.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
+import doctorRoutes from "./modules/doctor/doctor.routes.js";
+import clinicRoutes from "./modules/clinic/clinic.routes.js";
+import specializationRoutes from "./modules/specialization/specialization.routes.js";
+import discoveryRoutes from "./modules/discovery/discovery.routes.js";
+import reviewRoutes from "./modules/review/review.routes.js";
+import sosRoutes from "./modules/sos/sos.routes.js";
+import appointmentRoutes from "./modules/appointment/appointment.routes.js";
+import consultationRoutes from "./modules/consultation/consultation.routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,8 +70,18 @@ app.get("/health", (req, res) => {
   });
 });
 
-// API Routes
-app.use("/api/v1", moduleRoutes);
+// API Routes Mounted Directly
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/doctors", doctorRoutes);
+app.use("/api/v1/clinics", clinicRoutes);
+app.use("/api/v1/specializations", specializationRoutes);
+app.use("/api/v1/discover", discoveryRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/sos", sosRoutes);
+app.use("/api/v1/appointments", appointmentRoutes);
+app.use("/api/v1/consultations", consultationRoutes);
 
 // API info endpoint
 app.get("/api", (req, res) => {
@@ -70,7 +92,13 @@ app.get("/api", (req, res) => {
       health: "/health",
       auth: "/api/v1/auth",
       users: "/api/v1/users",
-      admin: "/api/v1/admin"
+      admin: "/api/v1/admin",
+      doctors: "/api/v1/doctors",
+      clinics: "/api/v1/clinics",
+      specializations: "/api/v1/specializations",
+      discover: "/api/v1/discover",
+      reviews: "/api/v1/reviews",
+      sos: "/api/v1/sos"
     }
   });
 });

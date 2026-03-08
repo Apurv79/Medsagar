@@ -4,12 +4,15 @@
  */
 
 export class ApiResponse {
-  static success(res, message, data = null, meta = null, status = 200) {
+  static success(res, message, data = null, meta = {}, status = 200) {
+    const defaultMeta = {
+      timestamp: new Date().toISOString()
+    };
     return res.status(status).json({
       success: true,
       message,
       data,
-      meta
+      meta: { ...defaultMeta, ...meta }
     });
   }
 

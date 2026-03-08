@@ -1,0 +1,13 @@
+export const CONSULTATION_STATUS = {
+  SCHEDULED: "SCHEDULED",
+  ACTIVE: "ACTIVE",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+};
+
+export const AGORA_ROLE = {
+  PUBLISHER: 1,
+  SUBSCRIBER: 2,
+};
+
+export const TOKEN_EXPIRY = 3600; // seconds
