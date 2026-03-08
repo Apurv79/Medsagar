@@ -1,15 +1,14 @@
 import * as service from "./chat.service.js";
-import asyncHandler from "../../utils/asyncHandler.js";
-import ApiResponse from "../../utils/apiResponse.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ApiResponse } from "../../utils/apiResponse.js";
 
 export const getChatHistory = asyncHandler(async (req, res) => {
   const { limit, cursor } = req.query;
 
   const data = await service.getChatHistory(
     req.params.consultationId,
-    parseInt(limit),
+    parseInt(limit) || 20,
     cursor
   );
-
-  res.json(new ApiResponse(200, data));
+  return ApiResponse.success(res, "Chat history fetched successfully", data);
 });

@@ -19,6 +19,9 @@ import reviewRoutes from "./modules/review/review.routes.js";
 import sosRoutes from "./modules/sos/sos.routes.js";
 import appointmentRoutes from "./modules/appointment/appointment.routes.js";
 import consultationRoutes from "./modules/consultation/consultation.routes.js";
+import chatRoutes from "./modules/chat/chat.routes.js";
+import prescriptionRoutes from "./modules/prescription/prescription.routes.js";
+import reportsRoutes from "./modules/reports/reports.routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,6 +85,9 @@ app.use("/api/v1/reviews", reviewRoutes);
 app.use("/api/v1/sos", sosRoutes);
 app.use("/api/v1/appointments", appointmentRoutes);
 app.use("/api/v1/consultations", consultationRoutes);
+app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/prescriptions", prescriptionRoutes);
+app.use("/api/v1/reports", reportsRoutes);
 
 // API info endpoint
 app.get("/api", (req, res) => {

@@ -1,0 +1,4 @@
+export const PRESCRIPTION_STATUS = {
+  DRAFT: "DRAFT",
+  FINALIZED: "FINALIZED",
+};

@@ -9,9 +9,6 @@ export const initChatSocket = async (server) => {
     cors: { origin: "*" },
   });
 
-  await pubClient.connect();
-  await subClient.connect();
-
   io.adapter(createAdapter(pubClient, subClient));
 
   io.use((socket, next) => {
