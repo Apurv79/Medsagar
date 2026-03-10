@@ -3,6 +3,10 @@ import dayjs from "dayjs";
 import { calculateSlotEnd, isCancellationAllowed, generateSlots } from "./appointment.utils.js";
 import { APPOINTMENT_STATUS, STATUS_TRANSITIONS } from "./appointment.constants.js";
 
+import * as walletService from "../wallet/wallet.service.js";
+import { TRANSACTION_TYPES } from "../wallet/wallet.constants.js";
+import Doctor from "../doctor/doctor.model.js";
+
 export const bookAppointment = async (payload) => {
   const slotEnd = calculateSlotEnd(payload.slotStart);
 
@@ -14,10 +18,24 @@ export const bookAppointment = async (payload) => {
 
   if (conflict) throw new Error("Slot already booked");
 
-  return Appointment.create({
+  const doctor = await Doctor.findById(payload.doctorId).lean();
+  if (!doctor) throw new Error("Doctor not found");
+
+  const consultationFee = doctor.consultationFee || 500; // Use actual fee
+
+  await walletService.debitWallet({
+    userId: payload.patientId,
+    amount: consultationFee,
+    type: TRANSACTION_TYPES.CONSULTATION_PAYMENT,
+    referenceId: `Appt-${Date.now()}` // Temporary reference until appointment is built
+  });
+
+  const appointment = await Appointment.create({
     ...payload,
     slotEnd,
   });
+
+  return appointment;
 };
 
 export const getAppointmentById = (id) => {

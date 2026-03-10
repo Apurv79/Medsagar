@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Razorpay Test - Medsagar</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f9fafb;
+            margin: 0;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #111827;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        button:disabled {
+            background-color: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+            word-break: break-all;
+        }
+
+        .success {
+            color: #10b981;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h2>Add to Wallet (Test)</h2>
+        <div class="form-group">
+            <label>API Base URL (Default Ngrok for Webhooks/API tests)</label>
+            <input type="text" id="baseUrl" value="https://690a-103-211-205-54.ngrok-free.app" />
+        </div>
+        <div class="form-group">
+            <label>Patient Access Token</label>
+            <input type="text" id="patToken" placeholder="eyJhbG..." />
+        </div>
+        <div class="form-group">
+            <label>Amount (INR)</label>
+            <input type="number" id="amount" value="500" />
+        </div>
+        <button id="payBtn" onclick="initPayment()">Topup Wallet via Razorpay</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const RZP_KEY = "rzp_test_SHTwJN4z94DatM"; // From env
+
+        async function initPayment() {
+            const btn = document.getElementById("payBtn");
+            const statusDiv = document.getElementById("status");
+            const baseUrl = document.getElementById("baseUrl").value.replace(/\/$/, "");
+            const token = document.getElementById("patToken").value;
+            const amount = document.getElementById("amount").value;
+
+            if (!token) {
+                statusDiv.innerHTML = "<span class='error'>Please provide the Access Token.</span>";
+                return;
+            }
+
+            btn.disabled = true;
+            statusDiv.innerHTML = "Creating Order...";
+
+            try {
+                // 1. Create Order
+                const orderRes = await fetch(`${baseUrl}/api/v1/payments/create-order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ amount: Number(amount) })
+                });
+
+                const orderData = await orderRes.json();
+
+                if (!orderRes.ok || !orderData.success) {
+                    throw new Error(orderData.message || "Failed to create order");
+                }
+
+                statusDiv.innerHTML = "Order Created. Opening Razorpay window...";
+
+                // 2. Open Razorpay Checktout via specific order id
+                const options = {
+                    "key": RZP_KEY,
+                    "amount": orderData.data.amount,
+                    "currency": "INR",
+                    "name": "Medsagar Test",
+                    "description": "Wallet Topup",
+                    "order_id": orderData.data.id,
+                    "handler": async function (response) {
+                        try {
+                            statusDiv.innerHTML = "Payment complete. Verifying signature on backend...";
+
+                            // 3. Verify Payment
+                            const verifyRes = await fetch(`${baseUrl}/api/v1/payments/verify`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                    orderId: response.razorpay_order_id,
+                                    paymentId: response.razorpay_payment_id,
+                                    signature: response.razorpay_signature
+                                })
+                            });
+
+                            const verifyData = await verifyRes.json();
+
+                            if (verifyData.success) {
+                                statusDiv.innerHTML = "<span class='success'>✅ Wallet Topup Successful & Verified!</span>";
+                            } else {
+                                statusDiv.innerHTML = "<span class='error'>❌ Verification Failed: " + verifyData.message + "</span>";
+                            }
+                        } catch (err) {
+                            statusDiv.innerHTML = "<span class='error'>❌ Verification Request Failed: " + err.message + "</span>";
+                        }
+                    },
+                    "theme": {
+                        "color": "#3b82f6"
+                    }
+                };
+
+                const rzp1 = new Razorpay(options);
+
+                rzp1.on('payment.failed', function (response) {
+                    statusDiv.innerHTML = `<span class='error'>Payment process failed: ${response.error.description} (The Webhook will also catch this in background.)</span>`;
+                });
+
+                rzp1.open();
+
+            } catch (err) {
+                statusDiv.innerHTML = `<span class='error'>Error: ${err.message}</span>`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

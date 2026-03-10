@@ -49,8 +49,10 @@ export const joinConsultation = async (consultationId, userId, role) => {
   };
 };
 
+import * as referralService from "../referral/referral.service.js";
+
 export const endConsultation = async (consultationId) => {
-  return Consultation.findByIdAndUpdate(
+  const consultation = await Consultation.findByIdAndUpdate(
     consultationId,
     {
       status: CONSULTATION_STATUS.COMPLETED,
@@ -58,6 +60,16 @@ export const endConsultation = async (consultationId) => {
     },
     { new: true }
   ).lean();
+
+  if (consultation && consultation.patientId) {
+    try {
+      await referralService.completeReferral(consultation.patientId);
+    } catch (err) {
+      console.error("Failed to complete referral reward:", err.message);
+    }
+  }
+
+  return consultation;
 };
 
 export const getConsultationById = (id) => {

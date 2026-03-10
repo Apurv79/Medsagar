@@ -16,12 +16,11 @@ const requiredEnv = [
   "SUPER_ADMIN_PASSWORD",
   "JWT_ACCESS_SECRET",
   "JWT_REFRESH_SECRET",
-  "JWT_ACCESS_EXPIRES",
   "JWT_REFRESH_EXPIRES",
   "MAIL_USER",
   "MAIL_PASS",
-  "REDIS_URL",
-
+  "REDIS_BULLMQ_URL",
+  "REDIS_CACHE_URL"
 ];
 
 requiredEnv.forEach((key) => {
@@ -50,7 +49,8 @@ export default {
     USER: process.env.MAIL_USER,
     PASS: process.env.MAIL_PASS
   },
-  REDIS_URL: process.env.REDIS_URL,
+  REDIS_BULLMQ_URL: process.env.REDIS_BULLMQ_URL,
+  REDIS_CACHE_URL: process.env.REDIS_CACHE_URL,
   AGORA_APP_ID: process.env.AGORA_APP_ID,
   AGORA_APP_CERTIFICATE: process.env.AGORA_APP_CERTIFICATE
 

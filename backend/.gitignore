@@ -15,4 +15,9 @@ appointment_consultation_contract.md
 *.md.tmp
 uploads/
 public/uploads/
-.DS_Storecpr_tester.js
+.DS_Store
+cpr_tester.js
+pwr_tester.js
+cpr_contract.md
+pwr_contract.md
+*.log

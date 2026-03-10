@@ -22,7 +22,9 @@ import consultationRoutes from "./modules/consultation/consultation.routes.js";
 import chatRoutes from "./modules/chat/chat.routes.js";
 import prescriptionRoutes from "./modules/prescription/prescription.routes.js";
 import reportsRoutes from "./modules/reports/reports.routes.js";
-
+import walletRoutes from "./modules/wallet/wallet.routes.js";
+import paymentRoutes from "./modules/payment/payment.routes.js";
+import referralRoutes from "./modules/referral/referral.routes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -88,6 +90,9 @@ app.use("/api/v1/consultations", consultationRoutes);
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/prescriptions", prescriptionRoutes);
 app.use("/api/v1/reports", reportsRoutes);
+app.use("/api/v1/wallet", walletRoutes);
+app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/referral", referralRoutes);
 
 // API info endpoint
 app.get("/api", (req, res) => {
