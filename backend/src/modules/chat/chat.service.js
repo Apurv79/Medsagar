@@ -1,6 +1,8 @@
 import ChatMessage from "./chat.model.js";
 import Consultation from "../consultation/consultation.model.js";
 import { DEFAULT_HISTORY_LIMIT } from "./chat.constants.js";
+import eventBus from "../../utils/eventBus.js";
+import User from "../user/user.model.js";
 
 export const validateConsultationAccess = async (consultationId, userId) => {
   const consultation = await Consultation.findById(consultationId).lean();
@@ -17,7 +19,21 @@ export const validateConsultationAccess = async (consultationId, userId) => {
 };
 
 export const saveMessage = async (payload) => {
-  return ChatMessage.create(payload);
+  const message = await ChatMessage.create(payload);
+
+  // Fetch sender name for notification
+  const sender = await User.findById(payload.senderId).select("name").lean();
+
+  // Emit event (listener handles filtering out if user is online in socket)
+  eventBus.emit("chat.message", {
+    senderId: payload.senderId,
+    receiverId: payload.receiverId,
+    senderName: sender?.name || "Someone",
+    message: payload.message,
+    chatId: payload.consultationId
+  });
+
+  return message;
 };
 
 export const getChatHistory = async (consultationId, limit, cursor) => {

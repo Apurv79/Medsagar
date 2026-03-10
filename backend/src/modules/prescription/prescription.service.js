@@ -1,6 +1,8 @@
 import Prescription from "./prescription.model.js";
 import Consultation from "../consultation/consultation.model.js";
 import { generatePrescriptionPDF } from "./prescription.utils.js";
+import eventBus from "../../utils/eventBus.js";
+import User from "../user/user.model.js";
 
 export const createPrescription = async (payload, doctorId) => {
   const consultation = await Consultation.findById(payload.consultationId).lean();
@@ -53,6 +55,16 @@ export const finalizePrescription = async (id, doctorId) => {
   prescription.status = "FINALIZED";
 
   await prescription.save();
+
+  // Fetch doctor name for notification
+  const doctor = await User.findById(doctorId).select("name").lean();
+
+  // Emit event
+  eventBus.emit("prescription.created", {
+    userId: prescription.patientId,
+    doctorName: doctor?.name || "Doctor",
+    prescriptionId: prescription._id
+  });
 
   return prescription;
 };

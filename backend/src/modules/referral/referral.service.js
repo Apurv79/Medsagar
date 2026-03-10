@@ -5,6 +5,7 @@ import { REFERRAL_STATUS, REFERRAL_REWARD } from "./referral.constants.js"
 
 import { creditWallet } from "../wallet/wallet.service.js"
 import { TRANSACTION_TYPES } from "../wallet/wallet.constants.js"
+import eventBus from "../../utils/eventBus.js";
 
 import User from "../user/user.model.js"
 
@@ -70,6 +71,17 @@ export const completeReferral = async (userId) => {
 
   referral.status = REFERRAL_STATUS.REWARDED
   await referral.save()
+
+  // Fetch referee name for notification
+  const referee = await User.findById(userId).select("name").lean()
+
+  // Emit Event
+  eventBus.emit("referral.rewarded", {
+    userId: referral.referrerId,
+    reward: REFERRAL_REWARD,
+    refereeName: referee?.name || "a friend",
+    refereeId: userId
+  })
 
   return referral
 }

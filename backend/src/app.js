@@ -25,6 +25,9 @@ import reportsRoutes from "./modules/reports/reports.routes.js";
 import walletRoutes from "./modules/wallet/wallet.routes.js";
 import paymentRoutes from "./modules/payment/payment.routes.js";
 import referralRoutes from "./modules/referral/referral.routes.js";
+import notificationRoutes from "./modules/notification/notification.routes.js";
+import storageRoutes from "./modules/file-storage/storage.routes.js";
+import analyticsRoutes from "./modules/analytics/analytics.routes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -93,6 +96,13 @@ app.use("/api/v1/reports", reportsRoutes);
 app.use("/api/v1/wallet", walletRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/referral", referralRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/analytics", analyticsRoutes);
+
+// Storage & Reports (Consolidated module, multiple mount points for semantics)
+app.use("/api/v1/storage", storageRoutes);
+app.use("/api/v1/reports", storageRoutes);
+app.use("/api/v1/doctor", storageRoutes);
 
 // API info endpoint
 app.get("/api", (req, res) => {
@@ -109,7 +119,8 @@ app.get("/api", (req, res) => {
       specializations: "/api/v1/specializations",
       discover: "/api/v1/discover",
       reviews: "/api/v1/reviews",
-      sos: "/api/v1/sos"
+      sos: "/api/v1/sos",
+      analytics: "/api/v1/analytics"
     }
   });
 });

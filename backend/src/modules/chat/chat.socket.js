@@ -15,7 +15,11 @@ export const initChatSocket = async (server) => {
     try {
       const token = socket.handshake.auth.token;
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (!token) {
+        return next(new Error("Authentication error: Token missing"));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 
       socket.user = decoded;
 
@@ -29,7 +33,7 @@ export const initChatSocket = async (server) => {
     socket.on("join-consultation", async (consultationId) => {
       await chatService.validateConsultationAccess(
         consultationId,
-        socket.user._id
+        socket.user.userId
       );
 
       socket.join(consultationId);
@@ -38,7 +42,7 @@ export const initChatSocket = async (server) => {
     socket.on("send-message", async (data) => {
       const message = await chatService.saveMessage({
         consultationId: data.consultationId,
-        senderId: socket.user._id,
+        senderId: socket.user.userId,
         receiverId: data.receiverId,
         message: data.message,
         attachmentUrl: data.attachmentUrl,

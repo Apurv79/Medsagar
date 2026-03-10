@@ -3,10 +3,14 @@ import http from "http";
 import connectDB from "./src/configs/db.config.js";
 import app from "./src/app.js";
 import { initChatSocket } from "./src/modules/chat/chat.socket.js";
+import "./src/workers/startWorkers.js";
+import initNotificationListener from "./src/modules/notification/notification.listener.js";
 
 const startServer = async () => {
   try {
     await connectDB();
+
+    initNotificationListener();
 
 
 

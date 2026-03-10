@@ -27,7 +27,12 @@ const validate = (schema, source = "body") => {
     }
 
     // Replace request data with validated (and stripped) value
-    req[source] = value;
+    if (source === "query") {
+      Object.keys(req.query).forEach(key => delete req.query[key]);
+      Object.assign(req.query, value);
+    } else {
+      req[source] = value;
+    }
     next();
   };
 };

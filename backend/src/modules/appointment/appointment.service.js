@@ -6,6 +6,7 @@ import { APPOINTMENT_STATUS, STATUS_TRANSITIONS } from "./appointment.constants.
 import * as walletService from "../wallet/wallet.service.js";
 import { TRANSACTION_TYPES } from "../wallet/wallet.constants.js";
 import Doctor from "../doctor/doctor.model.js";
+import eventBus from "../../utils/eventBus.js";
 
 export const bookAppointment = async (payload) => {
   const slotEnd = calculateSlotEnd(payload.slotStart);
@@ -33,6 +34,15 @@ export const bookAppointment = async (payload) => {
   const appointment = await Appointment.create({
     ...payload,
     slotEnd,
+  });
+
+  // Emit event for notification
+  eventBus.emit("appointment.booked", {
+    userId: payload.patientId,
+    doctorName: doctor.name,
+    date: dayjs(payload.appointmentDate).format("YYYY-MM-DD"),
+    time: dayjs(payload.slotStart).format("HH:mm"),
+    appointmentId: appointment._id
   });
 
   return appointment;

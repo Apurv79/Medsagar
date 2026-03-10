@@ -2,6 +2,7 @@ import Wallet from "./wallet.model.js";
 import WalletTransaction from "./walletTransaction.model.js";
 import { TRANSACTION_TYPES } from "./wallet.constants.js";
 import cacheRedis from "../../configs/redis.cache.js";
+import eventBus from "../../utils/eventBus.js";
 
 export const getWallet = async (userId) => {
   let wallet = await Wallet.findOne({ userId }).lean();
@@ -38,7 +39,7 @@ export const creditWallet = async ({ userId, amount, type, referenceId, metadata
     { new: true, upsert: true }
   );
 
-  await WalletTransaction.create({
+  const tx = await WalletTransaction.create({
     walletId: wallet._id,
     userId,
     type,
@@ -48,6 +49,15 @@ export const creditWallet = async ({ userId, amount, type, referenceId, metadata
   });
 
   await cacheRedis.del(`wallet_balance:${userId}`);
+
+  // Emit Credit Event
+  eventBus.emit("wallet.credit", {
+    userId,
+    amount,
+    balance: wallet.balance,
+    transactionId: tx._id
+  });
+
   return wallet;
 };
 
@@ -61,7 +71,7 @@ export const debitWallet = async ({ userId, amount, type, referenceId }) => {
   wallet.balance -= amount;
   await wallet.save();
 
-  await WalletTransaction.create({
+  const tx = await WalletTransaction.create({
     walletId: wallet._id,
     userId,
     type,
@@ -70,6 +80,15 @@ export const debitWallet = async ({ userId, amount, type, referenceId }) => {
   });
 
   await cacheRedis.del(`wallet_balance:${userId}`);
+
+  // Emit Debit Event
+  eventBus.emit("wallet.debit", {
+    userId,
+    amount,
+    balance: wallet.balance,
+    transactionId: tx._id
+  });
+
   return wallet;
 };
 

@@ -20,7 +20,11 @@ const requiredEnv = [
   "MAIL_USER",
   "MAIL_PASS",
   "REDIS_BULLMQ_URL",
-  "REDIS_CACHE_URL"
+  "REDIS_CACHE_URL",
+  "AWS_ACCESS_KEY_ID",
+  "AWS_SECRET_ACCESS_KEY",
+  "AWS_REGION",
+  "AWS_BUCKET_NAME"
 ];
 
 requiredEnv.forEach((key) => {
@@ -52,6 +56,12 @@ export default {
   REDIS_BULLMQ_URL: process.env.REDIS_BULLMQ_URL,
   REDIS_CACHE_URL: process.env.REDIS_CACHE_URL,
   AGORA_APP_ID: process.env.AGORA_APP_ID,
-  AGORA_APP_CERTIFICATE: process.env.AGORA_APP_CERTIFICATE
-
+  AGORA_APP_CERTIFICATE: process.env.AGORA_APP_CERTIFICATE,
+  AWS: {
+    ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    REGION: process.env.AWS_REGION,
+    BUCKET_NAME: process.env.AWS_BUCKET_NAME,
+    S3_PREFIX: process.env.AWS_S3_PREFIX
+  }
 };

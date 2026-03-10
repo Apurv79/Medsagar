@@ -83,6 +83,20 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
       index: true
+    },
+
+    fcmTokens: [
+      {
+        type: String
+      }
+    ],
+
+    notificationPreferences: {
+      pushEnabled: { type: Boolean, default: true },
+      smsEnabled: { type: Boolean, default: true },
+      appointmentReminders: { type: Boolean, default: true },
+      chatNotifications: { type: Boolean, default: true },
+      walletUpdates: { type: Boolean, default: true }
     }
   },
   {

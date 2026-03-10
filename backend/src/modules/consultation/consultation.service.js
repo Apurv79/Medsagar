@@ -3,6 +3,8 @@ import Appointment from "../appointment/appointment.model.js";
 import { CONSULTATION_STATUS } from "./consultation.constants.js";
 import { generateChannelName } from "./consultation.utils.js";
 import { generateAgoraToken } from "./agora.service.js";
+import eventBus from "../../utils/eventBus.js";
+import User from "../user/user.model.js";
 
 export const startConsultation = async (appointmentId, doctorId) => {
   const appointment = await Appointment.findById(appointmentId).lean();
@@ -23,6 +25,17 @@ export const startConsultation = async (appointmentId, doctorId) => {
     doctorId,
     "doctor"
   );
+
+  // Fetch doctor name for notification
+  const doctor = await User.findById(doctorId).select("name").lean();
+
+  // Emit event for patient to join
+  eventBus.emit("consultation.started", {
+    userId: appointment.patientId,
+    doctorName: doctor?.name || "Doctor",
+    consultationId: consultation._id,
+    callToken: generateAgoraToken(channel, appointment.patientId, "patient")
+  });
 
   return {
     consultationId: consultation._id,

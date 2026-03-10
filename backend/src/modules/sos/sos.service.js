@@ -2,9 +2,19 @@ import SOS from "./sos.model.js";
 import User from "../user/user.model.js";
 import Doctor from "../doctor/doctor.model.js";
 import { ApiError } from "../../utils/apiError.js";
+import eventBus from "../../utils/eventBus.js";
 
 export const createSOS = async (data) => {
-    return SOS.create(data);
+    const sos = await SOS.create(data);
+
+    // Emit event for notification
+    eventBus.emit("sos.triggered", {
+        userId: data.patientId, // Patient who triggered
+        location: data.address || "Unknown Location",
+        sosId: sos._id
+    });
+
+    return sos;
 };
 
 export const acceptSOS = async (sosId, userId) => {
